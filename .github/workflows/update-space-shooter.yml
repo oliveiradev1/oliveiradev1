@@ -1,0 +1,88 @@
+name: Atualizar Space Shooter
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - README.md
+      - .github/workflows/update-space-shooter.yml
+  schedule:
+    - cron: '25 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: space-shooter-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Baixar o repositório
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 2
+          persist-credentials: false
+
+      - name: Preparar pasta da animação
+        run: mkdir -p assets
+
+      - name: Gerar Space Shooter
+        uses: czl9707/gh-space-shooter@158ae82cc0dc704f06a71c87dc40afdfebcc6f88 # SHA inclui a entrada no-commit
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          username: oliveiradev1
+          output-path: assets/space-shooter.gif
+          strategy: random
+          fps: '40'
+          no-commit: 'true'
+          no-amend: 'true'
+
+      - name: Publicar GIF como artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: space-shooter-gif
+          path: assets/space-shooter.gif
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    if: github.ref == 'refs/heads/main'
+    needs: generate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Baixar o repositório
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 2
+
+      - name: Baixar a animação gerada
+        uses: actions/download-artifact@v4
+        with:
+          name: space-shooter-gif
+          path: assets
+
+      - name: Registrar atualização quando houver mudanças
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- assets/space-shooter.gif
+          if git diff --cached --quiet; then
+            echo "A animação não mudou; nenhum commit será criado."
+            exit 0
+          fi
+          git commit -m "Atualiza animação Space Shooter"
+          git push origin HEAD:main
