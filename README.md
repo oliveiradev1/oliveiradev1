@@ -1,4 +1,4 @@
-## Minha jornada de commits
+## My commit journey
 
 <p align="center">
   <img src="assets/space-shooter.gif" alt="Animação Space Shooter do meu gráfico de contribuições do GitHub" />
